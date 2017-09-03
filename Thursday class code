@@ -1,0 +1,110 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Aug 31 20:52:49 2017
+
+@author: wangyi
+"""
+data1 = []
+data2 = []
+dataFile1 = 'Voltage1.txt' # Must be a text file
+datafile2 = 'voltage2.txt'
+f=open(dataFile1,'r')
+o=open('voltage new one.csv','w')
+for line in f:
+    line=line.rstrip().split(',')
+    if not line:
+        break
+    o.write(line[0]+','+'0'+','+line[1]+','+'0\n')
+    data1.append(line[1])
+ 
+    
+    
+f.close()
+o.close()
+
+
+f=open(datafile2,'r')
+o=open('voltage new two.csv','w')
+for line in f:
+    line=line.rstrip().split(',')
+    if not line:
+        break
+    o.write(line[0]+','+'0'+','+line[1]+','+'0\n')
+    data2.append(line[1])
+    
+    
+f.close()
+o.close()
+
+f = open('voltage_all.txt','w')
+for d1,d2 in zip(data1,data2):
+    f.write(','.join((d1,'0',d2,'10e-5'))+'\n')
+    
+f.close()
+
+# Import the library
+import SpinlabCF as cf
+import numpy as np
+scalex=1/5000
+scaley=-1/1000
+
+dataFile1 = 'voltage_all.txt' # Must be a text file
+delimeter = ',' # The delimeter used to separate columns in your file
+absoluteSigma = True # True if uncertainies are absolute values, False for relative
+headers = False # Set this to True if you data file contains a row of column headers
+
+xDataCol = 0
+dxDataCol = 1
+yDataCol = 2
+dyDataCol = 3
+
+dataPlotFile = 'dataOmhIV.png'
+fitPlotFile = 'dfitOmhIV.png'
+residualPlotFile = 'resOmhIV.png'
+
+# Data Plot - shows only data points with error bars
+dataPlotOptions = cf.PlotOptions(title = "Ohm's Law Test - Data",
+                                 xlabel = 'Voltage (V)',
+                                 ylabel = 'Current (A)')
+
+# Fit Plot - shows data points with error bars and the fit line
+fitPlotOptions = cf.PlotOptions(title = "Ohm's Law Test - Fit",
+                                 xlabel = 'Voltage (V)',
+                                 ylabel = 'Current (A)')
+
+# Residual Plot - shows residuals with error bars and a zero reference line
+residualPlotOptions = cf.PlotOptions(title = "Ohm's Law Test - Residuals",
+                                 xlabel = 'Voltage (V)',
+                                 ylabel = 'Residuals (A)')
+                                 
+model = cf.Fit.Linear # or for a custom model like above: model = CustomModel()
+
+# Fit Options
+initialParams =[1,0]   # Initial guess of parameters (number of values needs to match number of parameters)
+                        # If you want to use the Model's best guess:
+                        #    initialParams = None
+                        # For a Fit.Linear:
+                        #     initialParams = [m,b]
+                        # For a Fit.Quadratic:
+                        #     initialParams = [a,b,c]
+                        # The same follows for all models; must be in same order as Model.paramNames
+bounds = [-np.inf,np.inf]   # Bounds to search for parameter values in
+
+method = 'lm'
+
+cols = {'X':xDataCol,'dX':dxDataCol,'Y':yDataCol,'dY':dyDataCol}
+data = cf.DataSet(dataFile1,delimeter,absoluteSigma,headers,cols)
+data.X=data.X*scalex
+data.Y=data.Y*scaley
+# Perform the fit
+fit = cf.Fit(data,model,initialParams,bounds,method)
+
+# Display the three plots
+fit.DisplayData(dataPlotOptions,dataPlotFile)
+fit.DisplayFit(fitPlotOptions,fitPlotFile)
+fit.DisplayResiduals(residualPlotOptions,residualPlotFile)
+
+# Display the results and goodness of fit
+print(fit.Results())
+
+cf.DisplayData(data)
